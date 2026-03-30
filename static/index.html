@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="ar" dir="rtl">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,55 +9,63 @@
   <body>
     <main class="shell">
       <header class="hero">
-        <div class="hero-copy">
-          <p class="eyebrow">Local-first Telegram PDF archiving</p>
-          <h1>TelePDF</h1>
-          <p class="lede">
-            Archive every PDF from a public Telegram source into a folder you control.
-            Your Telegram session stays local. Your files stay on your machine.
-          </p>
-          <div class="badge-row">
-            <span class="badge">Local-only</span>
-            <span class="badge">Telegram user session</span>
-            <span class="badge">CSV index included</span>
-          </div>
+        <p class="eyebrow">أداة محلية لتنزيل ملفات PDF من تيليجرام</p>
+        <h1>TelePDF</h1>
+        <p class="lede">
+          نزّل كل ملفات PDF من قناة أو حساب تيليجرام عام إلى جهازك، مع فهرس CSV محلي، وبدون رفع الملفات إلى أي خدمة خارجية.
+        </p>
+        <div class="badge-row">
+          <span class="badge">محلي فقط</span>
+          <span class="badge">جلسة تيليجرام شخصية</span>
+          <span class="badge">فهرس CSV تلقائي</span>
         </div>
-
-        <aside class="hero-card">
-          <p class="hero-card-label">What the app does</p>
-          <ol class="hero-steps">
-            <li>Save your Telegram API credentials locally.</li>
-            <li>Sign in with your Telegram account.</li>
-            <li>Point the app at a public source.</li>
-            <li>Download every PDF into a folder on your machine.</li>
-          </ol>
-        </aside>
+        <div class="hero-flow">
+          <span>1. جهّز مفاتيح Telegram API</span>
+          <span>2. سجّل الدخول برقمك</span>
+          <span>3. الصق المصدر وابدأ التنزيل</span>
+        </div>
       </header>
 
-      <section class="snapshot">
-        <article class="feature-card">
-          <p class="feature-label">Best for</p>
-          <h2>Legal archives, research channels, publication dumps</h2>
-          <p>Use it when a Telegram source has years of PDF uploads and you want one local archive instead of manual downloads.</p>
-        </article>
-        <article class="feature-card">
-          <p class="feature-label">Storage model</p>
-          <h2>Direct-to-disk archiving</h2>
-          <p>Downloaded files go straight to the output folder you choose. Metadata is exported as <code>telegram_pdf_index.csv</code>.</p>
-        </article>
-        <article class="feature-card">
-          <p class="feature-label">Safety model</p>
-          <h2>No shared cloud backend</h2>
-          <p>TelePDF runs as a local web app on <code>127.0.0.1</code>. It is designed for self-hosted use, not as a hosted public service.</p>
-        </article>
+      <section class="panel help-panel">
+        <div class="section-head">
+          <p class="section-kicker">دليل سريع</p>
+          <h2>قبل أول تشغيل</h2>
+        </div>
+
+          <div class="help-grid">
+          <article class="help-item">
+            <strong>مفاتيح Telegram API</strong>
+            <p>
+              ادخل إلى
+              <a href="https://my.telegram.org" target="_blank" rel="noreferrer">my.telegram.org</a>
+              وأنشئ تطبيقاً، ثم انسخ <code>api_id</code> و<code>api_hash</code>.
+            </p>
+          </article>
+          <article class="help-item">
+            <strong>صيغة رقم الهاتف</strong>
+            <p>اكتب رقمك كاملاً بصيغة دولية مثل <code>+965XXXXXXXX</code>.</p>
+          </article>
+          <article class="help-item">
+            <strong>صيغة المصدر</strong>
+            <p>استخدم فقط <code>@channelname</code> أو <code>https://t.me/channelname</code>.</p>
+          </article>
+          <article class="help-item">
+            <strong>مكان الحفظ</strong>
+            <p>ملفات PDF تحفظ في المجلد الذي تختاره، والجلسة والإعدادات تحفظ محلياً تحت <code>~/.telepdf</code>.</p>
+          </article>
+          <article class="help-item">
+            <strong>حماية المفاتيح</strong>
+            <p>يتم حفظ <code>API Hash</code> والجلسة الجديدة في التخزين الآمن للنظام بدل حفظها كنص مكشوف داخل ملف عادي.</p>
+          </article>
+        </div>
       </section>
 
       <div class="workspace">
         <section class="panel stack-panel">
           <div class="section-head">
-            <p class="section-kicker">Step 1</p>
-            <h2>Connect your Telegram account</h2>
-            <p>Get an <code>api_id</code> and <code>api_hash</code> from <code>my.telegram.org</code>, then save them here.</p>
+            <p class="section-kicker">الخطوة 1</p>
+            <h2>ربط حساب تيليجرام</h2>
+            <p>احفظ المفاتيح ورقم الهاتف، ثم اطلب كود تيليجرام وأكمل تسجيل الدخول.</p>
           </div>
 
           <form id="config-form" class="grid">
@@ -70,94 +78,100 @@
               <input name="api_hash" autocomplete="off" required>
             </label>
             <label>
-              <span>Phone number</span>
+              <span>رقم الهاتف</span>
               <input name="phone" placeholder="+965..." autocomplete="off" required>
             </label>
-            <button type="submit">Save local config</button>
+            <button type="submit">حفظ الإعدادات</button>
           </form>
 
           <div class="action-row">
-            <button id="send-code" type="button" class="secondary-button">Send Telegram code</button>
+            <button id="send-code" type="button" class="secondary-button">إرسال كود تيليجرام</button>
+          </div>
+
+          <div class="inline-note">
+            <strong>الترتيب الصحيح:</strong>
+            <span>احفظ الإعدادات أولاً، ثم اضغط إرسال الكود، ثم اكتب الكود الذي يصلك. إذا كان حسابك فيه 2FA اكتب كلمة المرور أيضاً.</span>
           </div>
 
           <form id="verify-form" class="grid compact">
             <label>
-              <span>Telegram code</span>
+              <span>كود تيليجرام</span>
               <input name="code" autocomplete="one-time-code">
             </label>
             <label>
-              <span>2FA password</span>
+              <span>كلمة مرور 2FA</span>
               <input name="password" type="password" autocomplete="current-password">
             </label>
-            <button type="submit">Verify login</button>
+            <button type="submit">تأكيد تسجيل الدخول</button>
           </form>
+
+          <div class="action-row action-row-split">
+            <button id="logout-button" type="button" class="ghost-button">تسجيل الخروج وحذف الجلسة</button>
+            <button id="clear-storage-button" type="button" class="ghost-button ghost-danger">حذف بيانات التطبيق المحلية</button>
+          </div>
+
+          <div class="inline-note subtle-note">
+            <strong>ماذا يعني حذف البيانات المحلية؟</strong>
+            <span>يحذف الإعدادات والجلسة والسجل المحلي فقط، ولا يحذف ملفات PDF التي سبق تنزيلها إلى جهازك.</span>
+          </div>
         </section>
 
         <section class="panel stack-panel">
           <div class="section-head">
-            <p class="section-kicker">Step 2</p>
-            <h2>Start the archive job</h2>
-            <p>Paste a public Telegram source and choose a destination folder on your machine.</p>
+            <p class="section-kicker">الخطوة 2</p>
+            <h2>بدء تنزيل الأرشيف</h2>
+            <p>ضع المصدر العام وحدد مجلد الحفظ على جهازك، ثم ابدأ المهمة.</p>
           </div>
 
           <form id="download-form" class="grid">
             <label>
-              <span>Source</span>
-              <input name="source" placeholder="@channel or https://t.me/channel" required>
+              <span>المصدر</span>
+              <input name="source" placeholder="@channel أو https://t.me/channel" required>
             </label>
             <label>
-              <span>Output folder</span>
+              <span>مجلد الحفظ</span>
               <input name="output_dir" placeholder="/Users/you/Documents/telegram-archive" required>
             </label>
-            <button type="submit">Start archive</button>
+            <button type="submit">ابدأ التنزيل</button>
           </form>
 
           <div class="inline-note">
-            <strong>Source rules:</strong>
-            <span>TelePDF expects a public source in the form <code>@username</code> or <code>https://t.me/username</code>.</span>
+            <strong>مهم:</strong>
+            <span>إذا شغّلت نفس المصدر مرة ثانية مع نفس مجلد الحفظ، فالتطبيق يتجاوز الرسائل التي سبق تنزيلها بدل أن يبدأ من الصفر.</span>
           </div>
-        </section>
-
-        <section class="panel monitor-panel">
-          <div class="monitor-head">
-            <div>
-              <p class="section-kicker">Step 3</p>
-              <h2>Watch the job</h2>
-            </div>
-            <span id="status-pill" class="status-pill" data-status="idle">Idle</span>
-          </div>
-
-          <div class="progress-block">
-            <div class="progress-meta">
-              <span id="progress-label">Waiting for a job</span>
-              <strong id="progress-value">0%</strong>
-            </div>
-            <div class="progress-track" aria-hidden="true">
-              <div id="progress-fill" class="progress-fill"></div>
-            </div>
-          </div>
-
-          <div id="status-grid" class="status-grid"></div>
-          <div id="job-highlights" class="job-highlights"></div>
-
-          <details class="raw-state">
-            <summary>Raw job state</summary>
-            <pre id="job-state" class="job-state"></pre>
-          </details>
         </section>
       </div>
 
-      <section class="panel notes-panel">
-        <div class="section-head">
-          <p class="section-kicker">Operational notes</p>
-          <h2>What to expect</h2>
+      <section class="panel monitor-panel">
+        <div class="monitor-head">
+          <div>
+            <p class="section-kicker">الخطوة 3</p>
+            <h2>متابعة الحالة</h2>
+          </div>
+          <span id="status-pill" class="status-pill" data-status="idle">جاهز</span>
         </div>
-        <ul class="notes">
-          <li>The app runs one archive job at a time.</li>
-          <li>It skips files already recorded for the same source and output folder.</li>
-          <li>Credentials and Telegram session files are stored locally under <code>data/</code>.</li>
-          <li>This project is designed for self-hosted use by the person who owns the Telegram session.</li>
-        </ul>
+
+        <div class="action-row action-row-inline">
+          <button id="stop-download" type="button" class="danger-button" disabled>إيقاف التنزيل</button>
+        </div>
+
+        <div class="progress-block">
+          <div class="progress-meta">
+            <span id="progress-label">بانتظار بدء المهمة</span>
+            <strong id="progress-value">0%</strong>
+          </div>
+          <div class="progress-track" aria-hidden="true">
+            <div id="progress-fill" class="progress-fill"></div>
+          </div>
+        </div>
+
+        <div id="status-grid" class="status-grid"></div>
+        <div id="job-highlights" class="job-highlights"></div>
+
+        <details class="raw-state">
+          <summary>عرض الحالة الخام</summary>
+          <pre id="job-state" class="job-state"></pre>
+        </details>
       </section>
     </main>
 

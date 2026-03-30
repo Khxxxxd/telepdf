@@ -10,16 +10,23 @@ from typing import Any, Dict, Optional
 
 from telethon import TelegramClient
 from telethon.errors import PhoneCodeExpiredError, PhoneCodeInvalidError, SessionPasswordNeededError
+from telethon.sessions import StringSession
 
 from .config import (
+    LEGACY_SESSION_PATH,
     LEDGER_PATH,
-    SESSION_PATH,
     StoredConfig,
     clear_auth_state,
+    clear_local_data,
+    clear_legacy_session_files,
+    clear_session_string,
+    legacy_session_exists,
     load_auth_state,
     load_config,
+    load_session_string,
     save_auth_state,
     save_config,
+    save_session_string,
 )
 from .state import DownloadLedger, build_saved_filename, message_link, normalize_source_identifier
 
@@ -44,6 +51,7 @@ class TelepdfArchiver:
     def __init__(self) -> None:
         self._ledger = DownloadLedger(LEDGER_PATH)
         self._lock = threading.Lock()
+        self._stop_requested = threading.Event()
         self._job = JobState()
         self._authorized_cache = False
         self._pending_password = False
@@ -71,9 +79,9 @@ class TelepdfArchiver:
     def save_config(self, api_id: str, api_hash: str, phone: str) -> Dict[str, Any]:
         config = StoredConfig(api_id=str(api_id).strip(), api_hash=str(api_hash).strip(), phone=str(phone).strip())
         if not config.api_id or not config.api_hash or not config.phone:
-            raise ValueError("api_id, api_hash, and phone are required.")
+            raise ValueError("يجب إدخال API ID وAPI Hash ورقم الهاتف.")
         if not config.api_id.isdigit():
-            raise ValueError("api_id must be numeric.")
+            raise ValueError("API ID يجب أن يكون رقماً فقط.")
         save_config(config)
         self.refresh_authorized_state()
         return self.get_status()
@@ -84,13 +92,15 @@ class TelepdfArchiver:
         save_auth_state({"phone": config.phone, "phone_code_hash": result.phone_code_hash})
         with self._lock:
             self._pending_password = False
-        return {"message": f"Verification code sent to {config.phone}."}
+        return {"message": f"تم إرسال كود التحقق إلى {config.phone}."}
 
     async def _send_code_async(self, config: StoredConfig) -> Any:
-        client = TelegramClient(str(SESSION_PATH), int(config.api_id), config.api_hash)
+        client = self._build_client(config)
         await client.connect()
         try:
-            return await client.send_code_request(config.phone)
+            result = await client.send_code_request(config.phone)
+            self._persist_session(client)
+            return result
         finally:
             await client.disconnect()
 
@@ -99,20 +109,20 @@ class TelepdfArchiver:
         auth_state = load_auth_state()
         phone_code_hash = auth_state.get("phone_code_hash", "")
         if not phone_code_hash:
-            raise ValueError("No pending login was found. Send the code first.")
+            raise ValueError("لا توجد محاولة تسجيل دخول معلقة. أرسل الكود أولاً.")
         try:
             asyncio.run(self._verify_code_async(config, str(code).strip(), phone_code_hash, str(password).strip()))
         except SessionPasswordNeededError:
             with self._lock:
                 self._pending_password = True
-            raise ValueError("Telegram 2FA password is required.")
+            raise ValueError("الحساب يتطلب كلمة مرور 2FA.")
         except PhoneCodeInvalidError as exc:
-            raise ValueError("The Telegram login code is invalid.") from exc
+            raise ValueError("كود تيليجرام غير صحيح.") from exc
         except PhoneCodeExpiredError as exc:
-            raise ValueError("The Telegram login code has expired. Send a new code.") from exc
+            raise ValueError("انتهت صلاحية كود تيليجرام. اطلب كوداً جديداً.") from exc
         clear_auth_state()
         self.refresh_authorized_state()
-        return {"message": "Telegram login completed successfully."}
+        return {"message": "تم تسجيل الدخول إلى تيليجرام بنجاح."}
 
     async def _verify_code_async(
         self,
@@ -121,7 +131,7 @@ class TelepdfArchiver:
         phone_code_hash: str,
         password: str,
     ) -> None:
-        client = TelegramClient(str(SESSION_PATH), int(config.api_id), config.api_hash)
+        client = self._build_client(config)
         await client.connect()
         try:
             try:
@@ -130,6 +140,7 @@ class TelepdfArchiver:
                 if not password:
                     raise
                 await client.sign_in(password=password)
+            self._persist_session(client)
         finally:
             await client.disconnect()
 
@@ -148,26 +159,29 @@ class TelepdfArchiver:
         return authorized
 
     async def _is_authorized_async(self, config: StoredConfig) -> bool:
-        client = TelegramClient(str(SESSION_PATH), int(config.api_id), config.api_hash)
+        client = self._build_client(config)
         await client.connect()
         try:
-            return await client.is_user_authorized()
+            authorized = await client.is_user_authorized()
+            self._persist_session(client)
+            return authorized
         finally:
             await client.disconnect()
 
     def start_download(self, source_identifier: str, output_dir: str) -> Dict[str, Any]:
         source = normalize_source_identifier(source_identifier)
         if not source:
-            raise ValueError("A Telegram source is required.")
+            raise ValueError("يجب إدخال مصدر تيليجرام.")
         target_dir = Path(output_dir or "").expanduser()
         if not str(target_dir).strip():
-            raise ValueError("An output directory is required.")
+            raise ValueError("يجب تحديد مجلد الحفظ.")
         if not self.refresh_authorized_state():
-            raise ValueError("Telegram is not authorized yet. Complete login first.")
+            raise ValueError("يجب إكمال تسجيل الدخول إلى تيليجرام أولاً.")
 
         with self._lock:
-            if self._job.status == "running":
-                raise ValueError("Another download job is already running.")
+            if self._job.status in {"running", "stopping"}:
+                raise ValueError("توجد مهمة تنزيل أخرى قيد التشغيل حالياً.")
+            self._stop_requested.clear()
             self._job = JobState(
                 status="running",
                 source=source,
@@ -181,7 +195,36 @@ class TelepdfArchiver:
             daemon=True,
         )
         thread.start()
-        return {"message": "Download job started."}
+        return {"message": "بدأت مهمة التنزيل."}
+
+    def stop_download(self) -> Dict[str, Any]:
+        with self._lock:
+            if self._job.status == "stopping":
+                return {"message": "تم طلب الإيقاف بالفعل. انتظر حتى ينتهي الملف الحالي."}
+            if self._job.status != "running":
+                raise ValueError("لا توجد مهمة تنزيل قيد التشغيل لإيقافها.")
+            self._job.status = "stopping"
+            self._job.error = ""
+            self._stop_requested.set()
+        return {"message": "تم طلب إيقاف المهمة. سيجري الإيقاف بعد إنهاء الملف الحالي."}
+
+    def logout(self) -> Dict[str, Any]:
+        with self._lock:
+            if self._job.status in {"running", "stopping"}:
+                raise ValueError("أوقف مهمة التنزيل الحالية أولاً قبل تسجيل الخروج.")
+        clear_auth_state()
+        clear_session_string()
+        clear_legacy_session_files()
+        self.refresh_authorized_state()
+        return {"message": "تم تسجيل الخروج وحذف الجلسة المحلية."}
+
+    def clear_local_storage(self) -> Dict[str, Any]:
+        with self._lock:
+            if self._job.status in {"running", "stopping"}:
+                raise ValueError("أوقف مهمة التنزيل الحالية أولاً قبل حذف البيانات المحلية.")
+        clear_local_data()
+        self.refresh_authorized_state()
+        return {"message": "تم حذف بيانات التطبيق المحلية. ملفات PDF المحفوظة لم يتم لمسها."}
 
     def _run_download_job_sync(self, source_identifier: str, output_dir: str) -> None:
         try:
@@ -193,14 +236,18 @@ class TelepdfArchiver:
         config = self._require_config()
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
+        stopped = False
 
-        client = TelegramClient(str(SESSION_PATH), int(config.api_id), config.api_hash)
+        client = self._build_client(config)
         await client.connect()
         try:
             entity = await client.get_entity(source_identifier)
             username = getattr(entity, "username", "") or normalize_source_identifier(source_identifier)
 
             async for message in client.iter_messages(entity, reverse=True):
+                if self._stop_requested.is_set():
+                    stopped = True
+                    break
                 self._bump_job(scanned_messages=1)
                 if not self._message_is_pdf(message):
                     continue
@@ -237,11 +284,12 @@ class TelepdfArchiver:
                 }
                 self._ledger.upsert(source_identifier, output_dir, message.id, record)
                 self._bump_job(downloaded_count=1, last_file=Path(saved_file).name)
+            self._persist_session(client)
         finally:
             await client.disconnect()
 
         self._write_csv_snapshot(source_identifier, output_dir)
-        self._finish_job(status="completed")
+        self._finish_job(status="stopped" if stopped or self._stop_requested.is_set() else "completed")
 
     def _write_csv_snapshot(self, source_identifier: str, output_dir: str) -> None:
         rows = self._ledger.list_for_output(source_identifier, output_dir)
@@ -295,8 +343,33 @@ class TelepdfArchiver:
     def _require_config(self) -> StoredConfig:
         config = load_config()
         if not config.api_id or not config.api_hash or not config.phone:
-            raise ValueError("Save api_id, api_hash, and phone first.")
+            raise ValueError("احفظ API ID وAPI Hash ورقم الهاتف أولاً.")
         return config
+
+    def _build_client(self, config: StoredConfig) -> TelegramClient:
+        session_string = load_session_string()
+        if session_string:
+            return TelegramClient(StringSession(session_string), int(config.api_id), config.api_hash)
+        if legacy_session_exists():
+            return TelegramClient(str(LEGACY_SESSION_PATH), int(config.api_id), config.api_hash)
+        return TelegramClient(StringSession(), int(config.api_id), config.api_hash)
+
+    def _persist_session(self, client: TelegramClient) -> None:
+        if isinstance(client.session, StringSession):
+            save_session_string(client.session.save())
+            return
+
+        auth_key = getattr(client.session, "auth_key", None)
+        if not auth_key:
+            return
+
+        migrated = StringSession()
+        migrated.set_dc(client.session.dc_id, client.session.server_address, client.session.port)
+        migrated.auth_key = auth_key
+        session_string = migrated.save()
+        save_session_string(session_string)
+        if load_session_string() == session_string:
+            clear_legacy_session_files()
 
     def _bump_job(self, **increments: Any) -> None:
         with self._lock:
@@ -312,3 +385,4 @@ class TelepdfArchiver:
             self._job.status = status
             self._job.error = error
             self._job.finished_at = datetime.now(timezone.utc).isoformat()
+            self._stop_requested.clear()

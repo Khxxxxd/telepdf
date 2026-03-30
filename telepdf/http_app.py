@@ -47,13 +47,19 @@ class AppServer:
                             code=payload.get("code", ""),
                             password=payload.get("password", ""),
                         )
+                    elif path == "/api/auth/logout":
+                        response = archiver.logout()
                     elif path == "/api/downloads/start":
                         response = archiver.start_download(
                             source_identifier=payload.get("source", ""),
                             output_dir=payload.get("output_dir", ""),
                         )
+                    elif path == "/api/downloads/stop":
+                        response = archiver.stop_download()
+                    elif path == "/api/storage/clear":
+                        response = archiver.clear_local_storage()
                     else:
-                        self._send_json(HTTPStatus.NOT_FOUND, {"error": "Endpoint not found."})
+                        self._send_json(HTTPStatus.NOT_FOUND, {"error": "المسار المطلوب غير موجود."})
                         return
                 except ValueError as exc:
                     self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})

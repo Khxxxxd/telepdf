@@ -29,7 +29,10 @@ TelePDF turns that into a simple local workflow.
 
 ## Security model
 
-- Your `api_id`, `api_hash`, phone number, and Telegram session are stored locally under `~/.telepdf` by default.
+- Your `api_id` and phone number are stored locally under `~/.telepdf` by default.
+- Your `api_hash` is stored in the system secure store through `keyring`.
+- New Telegram sessions are stored through the secure store when possible.
+- Legacy local session files are still recognized so existing installs do not break immediately.
 - You can override that location with the `TELEPDF_HOME` environment variable if you want a custom storage path.
 - The repository ignores `data/` by default via `.gitignore` in case you choose a project-local runtime directory.
 - This app should be run by the person who owns the Telegram account being used.
@@ -119,7 +122,6 @@ At runtime, the app creates this local storage directory by default:
   config.json
   auth_state.json
   ledger.json
-  telegram_user.session
 ```
 
 If you want a different location:
@@ -127,6 +129,13 @@ If you want a different location:
 ```bash
 TELEPDF_HOME=/path/to/telepdf-state python3 -m telepdf
 ```
+
+The UI also includes:
+
+- `Logout and clear local session`
+- `Clear local app data`
+
+These actions do not delete previously downloaded PDFs from your chosen output folder.
 
 ## Development
 
