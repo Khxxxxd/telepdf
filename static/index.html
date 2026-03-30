@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TelePDF</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Local-first Telegram PDF archiving</p>
+          <h1>TelePDF</h1>
+          <p class="lede">
+            Archive every PDF from a public Telegram source into a folder you control.
+            Your Telegram session stays local. Your files stay on your machine.
+          </p>
+          <div class="badge-row">
+            <span class="badge">Local-only</span>
+            <span class="badge">Telegram user session</span>
+            <span class="badge">CSV index included</span>
+          </div>
+        </div>
+
+        <aside class="hero-card">
+          <p class="hero-card-label">What the app does</p>
+          <ol class="hero-steps">
+            <li>Save your Telegram API credentials locally.</li>
+            <li>Sign in with your Telegram account.</li>
+            <li>Point the app at a public source.</li>
+            <li>Download every PDF into a folder on your machine.</li>
+          </ol>
+        </aside>
+      </header>
+
+      <section class="snapshot">
+        <article class="feature-card">
+          <p class="feature-label">Best for</p>
+          <h2>Legal archives, research channels, publication dumps</h2>
+          <p>Use it when a Telegram source has years of PDF uploads and you want one local archive instead of manual downloads.</p>
+        </article>
+        <article class="feature-card">
+          <p class="feature-label">Storage model</p>
+          <h2>Direct-to-disk archiving</h2>
+          <p>Downloaded files go straight to the output folder you choose. Metadata is exported as <code>telegram_pdf_index.csv</code>.</p>
+        </article>
+        <article class="feature-card">
+          <p class="feature-label">Safety model</p>
+          <h2>No shared cloud backend</h2>
+          <p>TelePDF runs as a local web app on <code>127.0.0.1</code>. It is designed for self-hosted use, not as a hosted public service.</p>
+        </article>
+      </section>
+
+      <div class="workspace">
+        <section class="panel stack-panel">
+          <div class="section-head">
+            <p class="section-kicker">Step 1</p>
+            <h2>Connect your Telegram account</h2>
+            <p>Get an <code>api_id</code> and <code>api_hash</code> from <code>my.telegram.org</code>, then save them here.</p>
+          </div>
+
+          <form id="config-form" class="grid">
+            <label>
+              <span>API ID</span>
+              <input name="api_id" autocomplete="off" required>
+            </label>
+            <label>
+              <span>API Hash</span>
+              <input name="api_hash" autocomplete="off" required>
+            </label>
+            <label>
+              <span>Phone number</span>
+              <input name="phone" placeholder="+965..." autocomplete="off" required>
+            </label>
+            <button type="submit">Save local config</button>
+          </form>
+
+          <div class="action-row">
+            <button id="send-code" type="button" class="secondary-button">Send Telegram code</button>
+          </div>
+
+          <form id="verify-form" class="grid compact">
+            <label>
+              <span>Telegram code</span>
+              <input name="code" autocomplete="one-time-code">
+            </label>
+            <label>
+              <span>2FA password</span>
+              <input name="password" type="password" autocomplete="current-password">
+            </label>
+            <button type="submit">Verify login</button>
+          </form>
+        </section>
+
+        <section class="panel stack-panel">
+          <div class="section-head">
+            <p class="section-kicker">Step 2</p>
+            <h2>Start the archive job</h2>
+            <p>Paste a public Telegram source and choose a destination folder on your machine.</p>
+          </div>
+
+          <form id="download-form" class="grid">
+            <label>
+              <span>Source</span>
+              <input name="source" placeholder="@channel or https://t.me/channel" required>
+            </label>
+            <label>
+              <span>Output folder</span>
+              <input name="output_dir" placeholder="/Users/you/Documents/telegram-archive" required>
+            </label>
+            <button type="submit">Start archive</button>
+          </form>
+
+          <div class="inline-note">
+            <strong>Source rules:</strong>
+            <span>TelePDF expects a public source in the form <code>@username</code> or <code>https://t.me/username</code>.</span>
+          </div>
+        </section>
+
+        <section class="panel monitor-panel">
+          <div class="monitor-head">
+            <div>
+              <p class="section-kicker">Step 3</p>
+              <h2>Watch the job</h2>
+            </div>
+            <span id="status-pill" class="status-pill" data-status="idle">Idle</span>
+          </div>
+
+          <div class="progress-block">
+            <div class="progress-meta">
+              <span id="progress-label">Waiting for a job</span>
+              <strong id="progress-value">0%</strong>
+            </div>
+            <div class="progress-track" aria-hidden="true">
+              <div id="progress-fill" class="progress-fill"></div>
+            </div>
+          </div>
+
+          <div id="status-grid" class="status-grid"></div>
+          <div id="job-highlights" class="job-highlights"></div>
+
+          <details class="raw-state">
+            <summary>Raw job state</summary>
+            <pre id="job-state" class="job-state"></pre>
+          </details>
+        </section>
+      </div>
+
+      <section class="panel notes-panel">
+        <div class="section-head">
+          <p class="section-kicker">Operational notes</p>
+          <h2>What to expect</h2>
+        </div>
+        <ul class="notes">
+          <li>The app runs one archive job at a time.</li>
+          <li>It skips files already recorded for the same source and output folder.</li>
+          <li>Credentials and Telegram session files are stored locally under <code>data/</code>.</li>
+          <li>This project is designed for self-hosted use by the person who owns the Telegram session.</li>
+        </ul>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" hidden></div>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

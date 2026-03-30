@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "telepdf"
+version = "0.1.0"
+description = "Local-first Telegram PDF archiver for public channels and accounts."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+  { name = "Khaled Alotaibi" }
+]
+dependencies = [
+  "Telethon>=1.36,<2",
+]
+
+[project.scripts]
+telepdf = "telepdf.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
